@@ -12,6 +12,8 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import za.co.wiizo.wiizoapi.dto.UpdatePreferencesDTO;
+import za.co.wiizo.wiizoapi.dto.UpdateUserDTO;
 import za.co.wiizo.wiizoapi.entity.Role;
 import za.co.wiizo.wiizoapi.entity.RoleName;
 import za.co.wiizo.wiizoapi.entity.UserProfile;
@@ -46,26 +48,36 @@ public class UserProfileService implements UserDetailsService {
 //    @Autowired
 //    private JavaMailSender javaMailSender;
 
-    public UserProfile updateProfile(UserProfile userProfile) {
-        UserProfile existingUser = userProfileRepository.findByEmail(userProfile.getEmail());
-        if (userProfileRepository.existsByEmail(userProfile.getEmail())) {
+    public UserProfile updateProfile(UpdateUserDTO userProfile) {
+        UserProfile existingUser = userProfileRepository.findByEmail(jwtUtil.getCurrentUserDetails().getUsername());
+        if (existingUser == null) {
             throw new UsernameNotFoundException("User not found with username: " + userProfile.getEmail());
         }
-        // Update user fields
-        existingUser.setFirstName(userProfile.getFirstName());
-        existingUser.setLastName(userProfile.getLastName());
-        existingUser.setEmail(userProfile.getEmail());
-        existingUser.setPhoto(userProfile.getPhoto());
-        existingUser.setActive(userProfile.isActive());
 
-        // Encrypt updated user password before storing in database
-        if (userProfile.getPassword() != null && !userProfile.getPassword().isEmpty()) {
-            existingUser.setPassword(new BCryptPasswordEncoder().encode(userProfile.getPassword()));
+        // Validate and update user fields
+        String firstName = userProfile.getFirstName();
+        if (firstName == null || firstName.isEmpty()) {
+            throw new IllegalArgumentException("First name cannot be empty.");
         }
+        existingUser.setFirstName(firstName);
 
-        return userProfileRepository.save(userProfile);
+        String lastName = userProfile.getLastName();
+        existingUser.setLastName(lastName);
+
+        String cellphoneNumber = userProfile.getCellphoneNumber();
+        if (cellphoneNumber == null || cellphoneNumber.length() != 10) {
+            throw new IllegalArgumentException("Invalid cellphone number.");
+        }
+        existingUser.setCellphoneNumber(cellphoneNumber);
+
+        String idNumber = userProfile.getIdNumber();
+        if (idNumber == null || idNumber.length() != 13) {
+            throw new IllegalArgumentException("ID number must have exactly 13 numbers.");
+        }
+        existingUser.setIdNumber(idNumber);
+
+        return userProfileRepository.save(existingUser);
     }
-
     public UserProfile activateProfile(UserProfile userProfile) {
         UserProfile existingUser = userProfileRepository.findByEmail(userProfile.getEmail());
         if (existingUser.equals(null)) {
@@ -144,7 +156,9 @@ public class UserProfileService implements UserDetailsService {
         verificationCode.setExpirationTime(expirationTime);
 
         userProfile.setVerificationCode(verificationCode);
-        userProfile.setActive(false);
+        userProfile.setActive(true);
+        userProfile.setEmailNotification(true);
+        userProfile.setPushNotification(true);
 
         return userProfileRepository.save(userProfile);
 
@@ -212,5 +226,23 @@ public UserProfile getCurrentUser() {
         String verificationCode = uuidString.substring(0, 20);
 
         return verificationCode;
+    }
+
+    public void updatePreferences(UpdatePreferencesDTO updatePreferences) {
+
+        UserProfile existingUser = userProfileRepository.findByEmail(jwtUtil.getCurrentUserDetails().getUsername());
+        if (existingUser == null) {
+            throw new UsernameNotFoundException("Could not user");
+        }
+
+        if(updatePreferences.isEmailNotification()){
+            existingUser.setEmailNotification(updatePreferences.isEmailNotification());
+        }
+
+        if (updatePreferences.isPushNotification()){
+            existingUser.setPushNotification(updatePreferences.isPushNotification());
+        }
+
+        userProfileRepository.save(existingUser);
     }
 }

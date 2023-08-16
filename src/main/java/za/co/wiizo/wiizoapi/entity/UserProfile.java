@@ -33,6 +33,11 @@ public class UserProfile {
     private String password;
 
     @Column(nullable = false)
+    private boolean isEmailNotification;
+
+    @Column(nullable = false)
+    private boolean isPushNotification;
+    @Column(nullable = false)
     private boolean isActive;
     @ManyToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
     @JoinTable(name = "user_roles",
@@ -117,5 +122,21 @@ public class UserProfile {
 
     public void setVerificationCode(VerificationCode verificationCode) {
         this.verificationCode = verificationCode;
+    }
+
+    public boolean isEmailNotification() {
+        return isEmailNotification;
+    }
+
+    public void setEmailNotification(boolean emailNotification) {
+        isEmailNotification = emailNotification;
+    }
+
+    public boolean isPushNotification() {
+        return isPushNotification;
+    }
+
+    public void setPushNotification(boolean pushNotification) {
+        isPushNotification = pushNotification;
     }
 }

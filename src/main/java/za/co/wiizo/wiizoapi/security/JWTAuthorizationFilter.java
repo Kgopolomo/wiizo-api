@@ -31,27 +31,23 @@ public class JWTAuthorizationFilter extends OncePerRequestFilter {
 
         String header = request.getHeader("Authorization");
         if (header != null && header.startsWith("Bearer ")) {
-            String username = null;
             String authToken = header.substring(7);
             try {
-                username = jwtUtil.extractUsername(authToken);
-            } catch (IllegalArgumentException e) {
-                logger.error("An error occurred during getting username from token", e);
-            } catch (ExpiredJwtException e) {
-                logger.warn("The token is expired and not valid anymore", e);
-            }
-
-            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                String username = jwtUtil.extractUsername(authToken);
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
                 if (jwtUtil.validateToken(authToken, userDetails)) {
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                             userDetails, null, userDetails.getAuthorities());
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    logger.info("Authenticated user " + username + ", setting security context");
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 }
+            } catch (ExpiredJwtException e) {
+                logger.warn("The token is expired and not valid anymore", e);
+            } catch (IllegalArgumentException e) {
+                logger.error("An error occurred during getting username from token", e);
             }
         }
+
         chain.doFilter(request, response);
     }
 }
